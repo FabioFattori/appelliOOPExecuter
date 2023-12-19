@@ -1,6 +1,9 @@
-package a02a.e2;
+package a01c.e2;
 
 import javax.swing.*;
+
+import a01c.e2.Logic.CellTypes;
+
 import java.util.*;
 import java.util.List;
 import java.awt.*;
@@ -8,6 +11,8 @@ import java.awt.event.ActionListener;
 
 public class GUI extends JFrame {
 
+    private final String CellaPiena = "*";
+    private final String CellaVuota = "";
     private final Logic logic;
     private final Map<Pair<Integer, Integer>, JButton> map;
 
@@ -21,19 +26,16 @@ public class GUI extends JFrame {
         this.getContentPane().add(panel);
 
         ActionListener al = e -> {
-            logic.move();
+            var button = (JButton) e.getSource();
+            logic.fillACell(getCoordinateFromButton(button));
 
-            if (logic.checkEnd()) {
-                System.exit(0);
-            }
             repaint(logic.getMap());
         };
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                var pos = new Pair<>(j, i);
-                final JButton jb = new JButton(" ");
-                this.map.put(pos, jb);
+                final JButton jb = new JButton(this.CellaVuota);
+                this.map.put(new Pair<Integer,Integer>(i,j), jb);
                 jb.addActionListener(al);
                 panel.add(jb);
             }
@@ -41,14 +43,19 @@ public class GUI extends JFrame {
         this.setVisible(true);
     }
 
-    private void repaint(int[][] logicMap) {
+    private Pair<Integer,Integer> getCoordinateFromButton(JButton btn){
+        return this.map.entrySet().stream().filter((e)->e.getValue() == btn).findFirst().get().getKey();
+    }
+
+    private void repaint(CellTypes[][] logicMap) {
         for (int i = 0; i < logicMap.length; i++) {
             for (int j = 0; j < logicMap[i].length; j++) {
-                if (logicMap[i][j] != -1) {
-                    this.map.get(new Pair<>(i, j)).setText(logicMap[i][j] + "");
+                if (logicMap[i][j] == CellTypes.Piena) {
+                    this.map.get(new Pair<>(i, j)).setText(this.CellaPiena);
+                } else {
+                    this.map.get(new Pair<>(i, j)).setText(this.CellaVuota);
                 }
             }
         }
     }
-
 }
