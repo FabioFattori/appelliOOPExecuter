@@ -1,91 +1,66 @@
 package a02b.e1;
 
-import static a02b.e1.UniversityProgram.Sector.COMPUTER_ENGINEERING;
-import static a02b.e1.UniversityProgram.Sector.COMPUTER_SCIENCE;
-import static a02b.e1.UniversityProgram.Sector.MATHEMATICS;
-import static a02b.e1.UniversityProgram.Sector.PHYSICS;
-import static a02b.e1.UniversityProgram.Sector.THESIS;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BiPredicate;
 
 import a02b.e1.UniversityProgram.Sector;
 
 public class UniversityProgramFactoryImpl implements UniversityProgramFactory {
 
-    private final int requiredCredits = 60;
-
-    private UniversityProgram createGenericProgram(
-            BiPredicate<Set<String>, HashMap<String, Pair<Sector, Integer>>> validatePredicate) {
+    private UniversityProgram generic(BiPredicate<Map<String, Pair<Sector, Integer>>, Set<String>> checkValidity) {
         return new UniversityProgram() {
-            private HashMap<String, Pair<Sector, Integer>> courses = new HashMap<>();
+
+            Map<String, Pair<Sector, Integer>> courses = new HashMap<>();
 
             @Override
             public void addCourse(String name, Sector sector, int credits) {
-                courses.put(name, new Pair<UniversityProgram.Sector, Integer>(sector, credits));
+                this.courses.put(name, new Pair<UniversityProgram.Sector, Integer>(sector, credits));
             }
 
             @Override
             public boolean isValid(Set<String> courseNames) {
-                return validatePredicate.test(courseNames, courses);
+                return checkValidity.test(courses, courseNames);
             }
 
         };
     }
 
+    private int calcOverAllCredits(Map<String, Pair<Sector, Integer>> table, Set<String> courses) {
+        return courses.stream().mapToInt(s -> table.get(s).get2()).sum();
+    }
+
+    private int calcSectorCredit(Map<String, Pair<Sector, Integer>> table, Set<String> courses, Sector sector) {
+        return courses.stream().map(s -> table.get(s)).filter(entry -> entry.get1() == sector).mapToInt(s -> s.get2())
+                .sum();
+    }
+
     @Override
     public UniversityProgram flexible() {
-        return this.createGenericProgram(
-                (names, insertedCourses) -> (calculateOverAllCredits(names, insertedCourses) == requiredCredits));
-    }
-
-    private int calculateOverAllCredits(Set<String> names, HashMap<String, Pair<Sector, Integer>> insertedCourses) {
-        int toRet = 0;
-
-        for (String string : names) {
-            toRet += insertedCourses.get(string).get2();
-        }
-        return toRet;
-    }
-
-    private int calculateSectorCredits(Sector sector, Set<String> names,
-            HashMap<String, Pair<Sector, Integer>> insertedCourses) {
-        int toRet = 0;
-
-        for (String string : names) {
-            if (insertedCourses.get(string).get1() == sector) {
-                toRet += insertedCourses.get(string).get2();
-            }
-        }
-        return toRet;
+        return this.generic((table, courses) -> calcOverAllCredits(table, courses) == 60);
     }
 
     @Override
     public UniversityProgram scientific() {
-        return this.createGenericProgram(
-                (names, insertedCourses) -> (calculateOverAllCredits(names, insertedCourses) == requiredCredits)
-                        && calculateSectorCredits(MATHEMATICS, names, insertedCourses) >= 12
-                        && calculateSectorCredits(COMPUTER_SCIENCE, names, insertedCourses) >= 12
-                        && calculateSectorCredits(PHYSICS, names, insertedCourses) >= 12);
+        return this.generic((table, courses) -> calcOverAllCredits(table, courses) == 60
+                && calcSectorCredit(table, courses, Sector.MATHEMATICS) >= 12
+                && calcSectorCredit(table, courses, Sector.COMPUTER_SCIENCE) >= 12
+                && calcSectorCredit(table, courses, Sector.PHYSICS) >= 12);
     }
 
     @Override
     public UniversityProgram shortComputerScience() {
-        return this.createGenericProgram(
-                (names, insertedCourses) -> (calculateOverAllCredits(names, insertedCourses) >= 48)
-                        && calculateSectorCredits(COMPUTER_SCIENCE, names, insertedCourses)
-                                + calculateSectorCredits(COMPUTER_ENGINEERING, names, insertedCourses) >= 30);
+        return this.generic((table,courses)->calcOverAllCredits(table, courses) >= 48
+                && calcSectorCredit(table, courses, Sector.COMPUTER_SCIENCE) + calcSectorCredit(table, courses, Sector.COMPUTER_ENGINEERING) >= 30);
     }
 
     @Override
     public UniversityProgram realistic() {
-        return this.createGenericProgram(
-                (names, insertedCourses) -> (calculateOverAllCredits(names, insertedCourses) == 120)
-                        && calculateSectorCredits(COMPUTER_SCIENCE, names, insertedCourses)
-                                + calculateSectorCredits(COMPUTER_ENGINEERING, names, insertedCourses) >= 60
-                        && calculateSectorCredits(PHYSICS, names, insertedCourses)
-                                + calculateSectorCredits(MATHEMATICS, names, insertedCourses) <= 18
-                        && calculateSectorCredits(THESIS, names, insertedCourses) == 24);
+        return this.generic((table,courses)->calcOverAllCredits(table, courses) == 120
+                && calcSectorCredit(table, courses, Sector.COMPUTER_SCIENCE) + calcSectorCredit(table, courses, Sector.COMPUTER_ENGINEERING) >= 60
+                && calcSectorCredit(table, courses, Sector.MATHEMATICS) + calcSectorCredit(table, courses, Sector.PHYSICS) <= 18
+                && calcSectorCredit(table, courses, Sector.THESIS) == 24);
     }
 
 }
